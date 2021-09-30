@@ -1,23 +1,17 @@
 import array
 import math
 
-from polyu.NBC1 import GaussianNBMMM
-
 """
 NBC为一个类，输入为4个参数
 
 """
-from sklearn.pipeline import Pipeline
-import numpy
-
-from sklearn.model_selection import train_test_split
-
 from sklearn.naive_bayes import GaussianNB
 import numpy as np
-from numpy import ndarray, exp, pi, sqrt, log, sum
+from numpy import exp, pi, sqrt, log
+
 
 class NBC:
-    def __init__(self, feature_types, num_classes, landa = 1 * math.e ** -10):
+    def __init__(self, feature_types, num_classes, landa=1 * math.e ** -6):
         self.feature_types = feature_types
         self.num_classes = num_classes
         self.landa = landa
@@ -29,43 +23,58 @@ class NBC:
         '''
         Xtrain is the four features , y is the lable of every row,
         first we need to ues ytrain to get the priori probability of THREE LABELS
+        Args:
+            Xtrain:
+            ytrain:
+
+        Returns:
+
         '''
         self.prior = self.get_y_pri(ytrain)
-
-        Xy = np.c_[np.array(Xtrain), np.array(ytrain).T]
         # the four features average value of the three labels
         self.avg = self.get_x_avg(Xtrain, ytrain)
         # the four features var value of the three labels
         # var = power(std, 2)
         self.var = self.get_x_var(Xtrain, ytrain)
-        # use avg and var to get the likelihood of each label(Gaussian distribution)
-        # y_likelihood = self.get_y_likelyhood(x_avg, x_var)
-
-        # self.likelihood = self.get_likelihood(Xtrain, ytrain)
 
 
-
-
-
-
-        clf = GaussianNB()
         pass
 
     def predict_prob(self, Xtest):
+        """
+        calculate the probability of every row in the test dataset
+        in order to choose the closest label of this row
+        Args:
+            Xtest:
+
+        Returns:
+            array
+        """
+        # apply_along_axis means cut the Xtest into rows in order to calculate easier the likelihood
         likelihood = np.apply_along_axis(self.get_likelihood, axis=1, arr=Xtest)
-        probs = self.prior * likelihood
-        # 按行相加
-        # probs_sum = probs.sum(axis=1)
-        # probs_sum[:, None] 相当于转置
-        # res = probs / probs_sum[:, None]
-        return probs
+        return self.prior * likelihood
 
     def predict(self, Xtest):
-        res = self.predict_prob(Xtest)
-        res1 = res.argmax(axis=1)
-        return res1
+        """
+        choose the largest probability as the label of row, return the label array
+        Args:
+            Xtest:
+
+        Returns:
+            array
+        """
+        return self.predict_prob(Xtest).argmax(axis=1)
 
     def get_count(self, ytrain, c):
+        """
+        get total number of every label in thetrain dataset
+        Args:
+            ytrain:
+            c: class lable
+
+        Returns:
+            int count
+        """
         count = 0
         for y in ytrain:
             if y == c:
@@ -73,42 +82,63 @@ class NBC:
         return count
 
     def get_y_pri(self, ytrain):
+        """
+        get prior probability of all labels
+        Args:
+            ytrain:
+
+        Returns:
+            array
+        """
         ytrain_len = len(ytrain)
-        pri_p_0 = self.get_count(ytrain, 0) / ytrain_len
-        pri_p_1 = self.get_count(ytrain, 1) / ytrain_len
-        pri_p_2 = self.get_count(ytrain, 2) / ytrain_len
-        return np.array([pri_p_0, pri_p_1, pri_p_2])
+        res = []
+        for y in range(self.num_classes):
+            pri_p = self.get_count(ytrain, y) / ytrain_len
+            res.append(pri_p)
+        return np.array(res)
 
     def get_x_var(self, Xtrain, ytrain):
+        """
+        get variance of every feature in the train dataset,
+        the result is necessary for predicting test dataset
+        Args:
+            Xtrain:
+            ytrain:
+
+        Returns:
+            array
+        """
         res = []
         for i in range(self.num_classes):
             res.append(Xtrain[ytrain == i].var(axis=0))
         return np.array(res)
 
-    def get_likelihood(self, para: array) -> array:
+    def get_likelihood(self, label_row: array):
+        """
+        get likelihood probability of every row of test dataset
 
-        ztfb = (1 / sqrt(2 * pi * self.var) * exp(-1 * (para - self.avg)**2 / (2 * self.var)))
-        res = (log(ztfb)).sum(axis=1)
+        we add landa parameter manually to avoid the computation result of Gaussian distribution may be zero
+        Args:
+            label_row:
 
-        return res
-        # res = []
-        # for i in range(self.num_classes):
-        #     curr_arr = Xtrain[ytrain == i]
-        #     log_val = []
-        #     for j in range(len(self.feature_types)):
-        #         feature_col = curr_arr[:, j]
-        #         col_log_likelihood_sum = 0
-        #         for val in feature_col:
-        #             col_log_likelihood_sum += self.get_single_likelihood(val, i, j)
-        #         log_val.append(col_log_likelihood_sum)
-        #     res.append(log_val)
-        # return np.array(res)
-
-    def get_single_likelihood(self, val, i, j):
-        return math.log( (1 / math.sqrt(2 * math.pi * self.var[i][j])) * math.exp(-1 * math.pow(val - self.avg[i][j], 2) / 2 * self.var[i][j]))
-
+        Returns:
+            array
+        """
+        gauss_dis = (1 / sqrt(2 * pi * self.var) * exp(-1 * (label_row - self.avg) ** 2 / (2 * self.var))) + self.landa
+        # log(abc) = loga + logb + loc
+        return (log(gauss_dis)).sum(axis=1)
 
     def get_x_avg(self, Xtrain, ytrain):
+        """
+        get average of every feature in the train dataset,
+        the result is necessary for predicting test dataset
+        Args:
+            Xtrain:
+            ytrain:
+
+        Returns:
+            array
+        """
         res = []
         for i in range(self.num_classes):
             res.append(Xtrain[ytrain == i].mean(axis=0))
@@ -132,12 +162,6 @@ ytest = y[shuffler[Ntrain:]]
 nbc = NBC(feature_types=['r', 'r', 'r', 'r'], num_classes=3)
 nbc.fit(Xtrain, ytrain)
 res = nbc.predict(Xtest)
-ytest = ytest
 test_accuracy = np.mean(res == ytest)
-# ab = np.c_[np.array(res), np.array(ytest), np.array(res - ytest)]
-# cp = np.c_(res, ytest)
-nbc1 = GaussianNBMMM()
-nbc1.fit(Xtrain, ytrain)
-res1 = nbc1.predict(Xtest)
-test_accuracy1 = np.mean(res1 == ytest)
-s = 1
+
+print("Congrats! Accuracy is %.3f%%! Excellent model!" % (test_accuracy * 100))
