@@ -62,7 +62,18 @@ class NBC:
         Returns:
             array
         """
-        return self.predict_prob(Xtest).argmax(axis=1)
+        return np.apply_along_axis(self.get_prediction_label, axis=1, arr=self.predict_prob(Xtest))
+
+    def get_prediction_label(self, prob_row):
+        """
+        get the corresponding label of the largest probability of each row
+        Args:
+            prob_row:
+
+        Returns:
+            array
+        """
+        return np.argmax(prob_row)
 
     def get_count(self, ytrain, c):
         """
@@ -162,4 +173,4 @@ nbc.fit(Xtrain, ytrain)
 yhat = nbc.predict(Xtest)
 test_accuracy = np.mean(yhat == ytest)
 
-print("Congrats! Accuracy is %.3f%%! Excellent model!" % (test_accuracy * 100))
+print("Congrats! The accuracy is %.3f%%! Excellent model!" % (test_accuracy * 100))
