@@ -1,17 +1,18 @@
-import array
-import math
-
-"""
-NBC为一个类，输入为4个参数
-
-"""
-from sklearn.naive_bayes import GaussianNB
 import numpy as np
-from numpy import exp, pi, sqrt, log
+from numpy import exp, pi, sqrt, log, e
+
+from sklearn.datasets import load_iris
 
 
 class NBC:
-    def __init__(self, feature_types, num_classes, landa=1 * math.e ** -6):
+    def __init__(self, feature_types, num_classes, landa=1 * e ** -6):
+        """
+
+        Args:
+            feature_types:
+            num_classes:
+            landa: avoid the scenario of log0, defalt 1e-6
+        """
         self.feature_types = feature_types
         self.num_classes = num_classes
         self.landa = landa
@@ -20,25 +21,23 @@ class NBC:
         self.prior = None
 
     def fit(self, Xtrain, ytrain):
-        '''
+        """
         Xtrain is the four features , y is the lable of every row,
-        first we need to ues ytrain to get the priori probability of THREE LABELS
+        we need to use parameters to get some CONSTANTS(average, variance, prior probability)
+        in order to predict test datasets
         Args:
             Xtrain:
             ytrain:
 
         Returns:
 
-        '''
+        """
         self.prior = self.get_y_pri(ytrain)
-        # the four features average value of the three labels
+        # the four features average values of the three labels
         self.avg = self.get_x_avg(Xtrain, ytrain)
-        # the four features var value of the three labels
+        # the four features's var values of the three labels
         # var = power(std, 2)
         self.var = self.get_x_var(Xtrain, ytrain)
-
-
-        pass
 
     def predict_prob(self, Xtest):
         """
@@ -113,7 +112,7 @@ class NBC:
             res.append(Xtrain[ytrain == i].var(axis=0))
         return np.array(res)
 
-    def get_likelihood(self, label_row: array):
+    def get_likelihood(self, label_row):
         """
         get likelihood probability of every row of test dataset
 
@@ -124,6 +123,8 @@ class NBC:
         Returns:
             array
         """
+
+        # landa parameter is very important
         gauss_dis = (1 / sqrt(2 * pi * self.var) * exp(-1 * (label_row - self.avg) ** 2 / (2 * self.var))) + self.landa
         # log(abc) = loga + logb + loc
         return (log(gauss_dis)).sum(axis=1)
@@ -145,12 +146,9 @@ class NBC:
         return np.array(res)
 
 
-from sklearn.datasets import load_iris
-
 iris = load_iris()
 X, y = iris['data'], iris['target']
 
-# shape纬度
 N, D = X.shape
 Ntrain = int(0.8 * N)
 shuffler = np.random.permutation(N)
@@ -161,7 +159,7 @@ ytest = y[shuffler[Ntrain:]]
 
 nbc = NBC(feature_types=['r', 'r', 'r', 'r'], num_classes=3)
 nbc.fit(Xtrain, ytrain)
-res = nbc.predict(Xtest)
-test_accuracy = np.mean(res == ytest)
+yhat = nbc.predict(Xtest)
+test_accuracy = np.mean(yhat == ytest)
 
 print("Congrats! Accuracy is %.3f%%! Excellent model!" % (test_accuracy * 100))
